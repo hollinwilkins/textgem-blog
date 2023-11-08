@@ -1,6 +1,7 @@
 {
     "editor.formatOnSave": true,
     "rust-analyzer.linkedProjects": [
-        "./post1_graph_paper/Cargo.toml"
+        "./post1_graph_paper/Cargo.toml",
+        "./post2_graph_paper/Cargo.toml"
     ]
 }
