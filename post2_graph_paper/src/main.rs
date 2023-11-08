@@ -34,7 +34,7 @@ impl TextGem {
     ) {
         // Camera
         commands.spawn(Camera3dBundle {
-            transform: Transform::from_xyz(400.0, 100.0, 400.0)
+            transform: Transform::from_xyz(3000.0, 1000.0, 3000.0)
                 .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
             ..default()
         });
@@ -57,10 +57,10 @@ impl TextGem {
         // Graph Paper
         commands.spawn(MaterialMeshBundle {
             mesh: meshes.add(
-                GridPlane(shape::Plane {
-                    size: 3000.0,
-                    subdivisions: 100,
-                })
+                GridBox {
+                    size: Vec3::new(3000.0, 30.0, 3000.0),
+                    subdivisions: UVec3::new(100, 0, 100),
+                }
                 .into(),
             ),
             material: grid_materials.add(ExtendedMaterial {
