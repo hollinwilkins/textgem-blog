@@ -16,54 +16,48 @@
 #endif
 
 @group(1) @binding(100) var<uniform> grid_color: vec4<f32>;
-@group(1) @binding(101) var<uniform> grid_subdivisions: vec2<f32>;
+@group(1) @binding(101) var<uniform> grid_subdivisions: vec2<u32>;
 @group(1) @binding(102) var<uniform> grid_line_widths: vec2<f32>;
 
 fn sample_grid(
     uv: vec2<f32>
 ) -> f32 {
-    var multi_uv = uv * grid_subdivisions;
+    // Allows for further subdividing between UV coordinates
+    let grid_subdivisions_f32: vec2<f32> = vec2<f32>(f32(grid_subdivisions.x) + 1.0, f32(grid_subdivisions.y) + 1.0);
+    var multi_uv = uv * grid_subdivisions_f32;
 
-    // lineWidth = saturate(lineWidth);
+    // Make sure line width is between 0.0 and 1.0
     let line_widths = saturate(grid_line_widths);
 
-    // float4 uvDDXY = float4(ddx(uv), ddy(uv));
+    // difference of UV values between adjacent screen fragments
     let uv_ddxy = vec4<f32>(dpdx(multi_uv), dpdy(multi_uv));
 
-    // float2 uvDeriv = float2(length(uvDDXY.xz), length(uvDDXY.yw));
+    // some distance calculation eventually used in antialiasing
     let uv_deriv = vec2<f32>(length(uv_ddxy.xz), length(uv_ddxy.yw));
 
-    // bool2 invertLine = lineWidth > 0.5;
+    // if the line_width is more than half the space provided for drawing it,
+    // it's really the background then isn't it?
     let invert_line = line_widths > 0.5;
 
-    // float2 targetWidth = invertLine ? 1.0 - lineWidth : lineWidth;
+    // select the appropriate line_width based on how large it is
     let target_width = select(line_widths, 1.0 - line_widths, invert_line);
 
-    // float2 drawWidth = clamp(targetWidth, uvDeriv, 0.5);
+    // we want to draw at least the size of the derivative calculation, and at most
+    // half the available space to draw the line
     let draw_width = clamp(target_width, uv_deriv, vec2<f32>(0.5, 0.5));
 
-    // float2 lineAA = max(uvDeriv, 0.000001) * 1.5;
+    // scale the derivative for antialiasing
     let line_aa = uv_deriv * 1.5;
 
-    // float2 gridUV = abs(frac(uv) * 2.0 - 1.0);
+    // these steps are magical
     var grid_uv = abs(fract(multi_uv) * 2.0 - 1.0);
-
-    // gridUV = invertLine ? gridUV : 1.0 - gridUV;
     grid_uv = select(1.0 - grid_uv, grid_uv, invert_line);
-
-    // float2 grid2 = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUV);
     var grid2 = smoothstep(draw_width + line_aa, draw_width - line_aa, grid_uv);
-
-    // grid2 *= saturate(targetWidth / drawWidth);
     grid2 *= saturate(target_width / draw_width);
-
-    // grid2 = lerp(grid2, targetWidth, saturate(uvDeriv * 2.0 - 1.0));
     grid2 = mix(grid2, target_width, saturate(uv_deriv * 2.0 - 1.0));
-
-    // grid2 = invertLine ? 1.0 - grid2 : grid2;
     grid2 = select(grid2, 1.0 - grid2, invert_line);
 
-    // return lerp(grid2.x, 1.0, grid2.y);
+    // mix the x and y value to draw it if either x or y needs drawing
     return mix(grid2.x, 1.0, grid2.y);
 }
 
