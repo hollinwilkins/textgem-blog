@@ -38,7 +38,11 @@ impl TextGem {
         // Setup CameraTarget
         let mut camera_target = CameraTarget::default()
             .looking_at(Vec3::new(0.0, 0.0, 0.0))
-            .with_up(Vec3::Y);
+            .with_up(Vec3::Y)
+            .with_bounding_box(BoundingBox::new(
+                Vec3::new(-3000.0, 15.0, -3000.0),
+                Vec3::new(3000.0, 4000.0, 3000.0),
+            ));
 
         let min_x = 1000.0;
         let max_x = 1200.0;
@@ -122,6 +126,34 @@ impl MaterialExtension for GridMaterial {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BoundingBox {
+    a: Vec3,
+    b: Vec3,
+}
+
+impl Default for BoundingBox {
+    fn default() -> Self {
+        Self {
+            a: Vec3::new(f32::MIN, f32::MIN, f32::MIN),
+            b: Vec3::new(f32::MAX, f32::MAX, f32::MAX),
+        }
+    }
+}
+
+impl BoundingBox {
+    pub fn new(a: Vec3, b: Vec3) -> Self {
+        Self {
+            a: a.min(b),
+            b: a.max(b),
+        }
+    }
+
+    pub fn clamp(&self, position: Vec3) -> Vec3 {
+        position.clamp(self.a, self.b)
+    }
+}
+
 #[derive(Debug, Component)]
 pub struct CameraTarget {
     /// value in range [0.0, 1.0] which determines which zoom_level_offsets to use
@@ -139,6 +171,9 @@ pub struct CameraTarget {
     /// normal vector representing up for the camera
     up: Vec3,
 
+    /// bounding box for camera
+    bounding_box: BoundingBox,
+
     /// true wheh zoom_level, look_at, or up change
     /// this let's our system know to update the camera transform in the scene
     is_dirty: bool,
@@ -152,6 +187,7 @@ impl Default for CameraTarget {
             look_at: Vec3::default(),
             rotation: 0.0,
             up: Vec3::Y,
+            bounding_box: BoundingBox::default(),
             is_dirty: true,
         }
     }
@@ -271,7 +307,7 @@ impl CameraTarget {
 
     pub fn look_at(&mut self, look_at: Vec3) {
         let old_look_at = self.look_at;
-        self.look_at = look_at;
+        self.look_at = self.bounding_box.clamp(look_at);
 
         if old_look_at != self.look_at {
             self.is_dirty = true
@@ -311,6 +347,20 @@ impl CameraTarget {
 
     pub fn with_up(mut self, up: Vec3) -> Self {
         self.set_up(up);
+        self
+    }
+
+    pub fn set_bounding_box(&mut self, bounding_box: BoundingBox) {
+        let old_bounding_box = self.bounding_box;
+        self.bounding_box = bounding_box;
+
+        if old_bounding_box != self.bounding_box {
+            self.is_dirty = true
+        }
+    }
+
+    pub fn with_bounding_box(mut self, bounding_box: BoundingBox) -> Self {
+        self.set_bounding_box(bounding_box);
         self
     }
 
