@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::{
     input::mouse::MouseWheel,
     pbr::{ExtendedMaterial, MaterialExtension},
@@ -60,7 +62,7 @@ impl TextGem {
                 EulerRot::ZYX,
                 0.0,
                 1.0,
-                -3.14 / 4.,
+                -PI / 4.,
             )),
             directional_light: DirectionalLight {
                 shadows_enabled: true,
@@ -131,6 +133,9 @@ pub struct CameraTarget {
     /// point in space the camera should look at
     look_at: Vec3,
 
+    /// rotation angle around the up axis
+    rotation: f32,
+
     /// normal vector representing up for the camera
     up: Vec3,
 
@@ -145,6 +150,7 @@ impl Default for CameraTarget {
             zoom_level: 0,
             zoom_level_offsets: vec![],
             look_at: Vec3::default(),
+            rotation: 0.0,
             up: Vec3::Y,
             is_dirty: true,
         }
@@ -169,43 +175,64 @@ impl CameraTarget {
         };
 
         if keys.pressed(KeyCode::Equals) || keys.pressed(KeyCode::Plus) {
-            delta_zoom_level = 1;
+            delta_zoom_level = -1;
         }
         if keys.pressed(KeyCode::Minus) {
-            delta_zoom_level = -1;
+            delta_zoom_level = 1;
+        }
+
+        let mut delta_rotation: f32 = 0.0;
+
+        if keys.pressed(KeyCode::Q) {
+            delta_rotation = -0.005;
+        }
+        if keys.pressed(KeyCode::E) {
+            delta_rotation = 0.005;
         }
 
         let mut delta_x: f32 = 0.0;
         let mut delta_z: f32 = 0.0;
         if keys.pressed(KeyCode::W) || keys.pressed(KeyCode::Up) {
-            delta_x -= 1.0;
+            delta_x = 1.0;
         }
         if keys.pressed(KeyCode::S) || keys.pressed(KeyCode::Down) {
-            delta_x += 1.0;
+            delta_x = -1.0;
         }
         if keys.pressed(KeyCode::D) || keys.pressed(KeyCode::Right) {
-            delta_z -= 1.0;
+            delta_z = -1.0;
         }
         if keys.pressed(KeyCode::A) || keys.pressed(KeyCode::Left) {
-            delta_z += 1.0;
+            delta_z = 1.0;
         }
 
         if delta_zoom_level != 0 {
             target.change_zoom_to(delta_zoom_level);
         }
-        if delta_x != 0.0 || delta_z != 0.0 {
-            let mut look_at = *target.get_look_at();
-            look_at.x += delta_x * 10.0;
-            look_at.z += delta_z * 10.0;
-            target.look_at(look_at)
+        if delta_rotation != 0.0 {
+            target.change_rotation(delta_rotation);
         }
 
-        target.update_transform(&mut camera_transform)
+        target.update_transform(&mut camera_transform);
+        if delta_x != 0.0 || delta_z != 0.0 {
+            let mask = Vec3::new(1.0, 1.0, 1.0) - target.get_up();
+            let look_at = target.get_look_at() * mask; // multiply out the up component
+            let camera_at = camera_transform.translation * mask; // multiply out the up component
+            let forward = (look_at - camera_at).normalize();
+            let mut right_rotation = Transform::from_xyz(0.0, 0.0, 0.0);
+            right_rotation
+                .rotate_around(Vec3::default(), Quat::from_axis_angle(target.up, PI / 2.0));
+            let right = right_rotation * forward;
+
+            let new_look_at = look_at + (forward * delta_x * 10.0) + (right * delta_z * 10.0);
+            target.look_at(new_look_at);
+            target.update_transform(&mut camera_transform);
+        }
     }
 
     pub fn update_transform(&mut self, transform: &mut Transform) {
         if self.is_dirty {
             transform.translation = self.look_at + self.zoom_level_offsets[self.zoom_level];
+            transform.rotate_around(self.look_at, Quat::from_axis_angle(self.up, self.rotation));
             transform.look_at(self.look_at, self.up);
             self.is_dirty = false;
         }
@@ -231,8 +258,8 @@ impl CameraTarget {
         self
     }
 
-    pub fn get_look_at(&self) -> &Vec3 {
-        &self.look_at
+    pub fn get_look_at(&self) -> Vec3 {
+        self.look_at
     }
 
     pub fn look_at(&mut self, look_at: Vec3) {
@@ -247,6 +274,28 @@ impl CameraTarget {
     pub fn looking_at(mut self, look_at: Vec3) -> CameraTarget {
         self.look_at(look_at);
         self
+    }
+
+    pub fn change_rotation(&mut self, delta_rotation: f32) {
+        self.rotate(self.rotation + delta_rotation)
+    }
+
+    pub fn rotate(&mut self, rotation: f32) {
+        let old_rotation = self.rotation;
+        self.rotation = rotation;
+
+        if old_rotation != self.rotation {
+            self.is_dirty = true
+        }
+    }
+
+    pub fn rotating(mut self, rotation: f32) -> Self {
+        self.rotate(rotation);
+        self
+    }
+
+    pub fn get_up(&self) -> Vec3 {
+        self.up
     }
 
     pub fn set_up(&mut self, up: Vec3) {
