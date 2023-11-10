@@ -122,10 +122,20 @@ impl MaterialExtension for GridMaterial {
 
 #[derive(Debug, Component)]
 pub struct CameraTarget {
+    /// which offset to use for the camera
     zoom_level: usize,
+
+    /// list of offsets to position the camera relative to the look_at point
     zoom_level_offsets: Vec<Vec3>,
+
+    /// point in space the camera should look at
     look_at: Vec3,
+
+    /// normal vector representing up for the camera
     up: Vec3,
+
+    /// true wheh zoom_level, look_at, or up change
+    /// this let's our system know to update the camera transform in the scene
     is_dirty: bool,
 }
 
@@ -150,14 +160,20 @@ impl CameraTarget {
         let (mut target, mut camera_transform) = camera_query.single_mut();
 
         let delta_y: f32 = scroll_evr.read().map(|ev| ev.y).sum();
-        let delta_zoom_level = if delta_y < 0.0 {
+        let mut delta_zoom_level = if delta_y < 0.0 {
             -1
         } else if delta_y > 0.0 {
             1
         } else {
             0
         };
-        target.change_zoom_to(delta_zoom_level);
+
+        if keys.pressed(KeyCode::Equals) || keys.pressed(KeyCode::Plus) {
+            delta_zoom_level = 1;
+        }
+        if keys.pressed(KeyCode::Minus) {
+            delta_zoom_level = -1;
+        }
 
         let mut delta_x: f32 = 0.0;
         let mut delta_z: f32 = 0.0;
@@ -174,6 +190,9 @@ impl CameraTarget {
             delta_z += 1.0;
         }
 
+        if delta_zoom_level != 0 {
+            target.change_zoom_to(delta_zoom_level);
+        }
         if delta_x != 0.0 || delta_z != 0.0 {
             let mut look_at = *target.get_look_at();
             look_at.x += delta_x * 10.0;
