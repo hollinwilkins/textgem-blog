@@ -2,7 +2,8 @@
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::alpha_discard,
     mesh_view_bindings::view,
-    pbr_bindings
+    pbr_types::STANDARD_MATERIAL_FLAGS_UNLIT_BIT,
+    pbr_bindings,
 }
 
 
@@ -58,7 +59,6 @@ fn outline_alpha(uv: vec2<f32>) -> f32 {
 fn outline(uv: vec2<f32>) -> f32 {
     let c = textureSampleBias(pbr_bindings::base_color_texture, pbr_bindings::base_color_sampler, uv, view.mip_bias);
 
-
     if (c.a == 0.0) {
         return outline_alpha(uv);
     } else {
@@ -88,13 +88,17 @@ fn fragment(
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
 
 #ifdef PREPASS_PIPELINE
-    // in deferred mode we can't modify anything after that, as lighting is run in a separate fullscreen shader.
+    // write the gbuffer, lighting pass id, and optionally normal and motion_vector textures
     let out = deferred_output(in, pbr_input);
 #else
+    // in forward mode, we calculate the lit color immediately, and then apply some post-lighting effects here.
+    // in deferred mode the lit color and these effects will be calculated in the deferred lighting shader
     var out: FragmentOutput;
-
-    // apply lighting
-    out.color = apply_pbr_lighting(pbr_input);
+    if (pbr_input.material.flags & STANDARD_MATERIAL_FLAGS_UNLIT_BIT) == 0u {
+        out.color = apply_pbr_lighting(pbr_input);
+    } else {
+        out.color = pbr_input.material.base_color;
+    }
 
     // apply in-shader post processing (fog, alpha-premultiply, and also tonemapping, debanding if the camera is non-hdr)
     // note this does not include fullscreen postprocessing effects like bloom.

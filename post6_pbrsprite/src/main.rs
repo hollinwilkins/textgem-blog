@@ -44,7 +44,7 @@ fn init_scene(
 
     // Setup CameraTarget
     let mut camera_target = grid::CameraTarget::default()
-        .looking_at(Vec3::new(0.0, 0.0, 0.0))
+        .looking_at(Vec3::new(0.0, 15.0, 0.0))
         .with_up(Vec3::Y)
         .with_bounding_box(grid::BoundingBox::new(
             Vec3::new(-3000.0, 15.0, -3000.0),
@@ -74,7 +74,7 @@ fn init_scene(
             .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
         directional_light: DirectionalLight {
             shadows_enabled: true,
-            illuminance: 30000.0,
+            illuminance: 50000.0,
             ..default()
         },
         ..default()

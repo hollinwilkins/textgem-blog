@@ -117,7 +117,7 @@ impl Plugin for PbrSpritePlugin {
     fn build(&self, app: &mut App) {
         let mut material_plugin =
             MaterialPlugin::<ExtendedMaterial<StandardMaterial, PbrSpriteMaterial>>::default();
-        material_plugin.prepass_enabled = false;
+        material_plugin.prepass_enabled = true;
 
         app.add_plugins(material_plugin);
     }
