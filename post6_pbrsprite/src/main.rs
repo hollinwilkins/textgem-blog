@@ -102,7 +102,7 @@ fn init_scene(
 
     // PBR Sprite
     let image: Handle<Image> =
-        asset_server.load_with_settings("goombah.png", |settings: &mut ImageLoaderSettings| {
+        asset_server.load_with_settings("goomba.png", |settings: &mut ImageLoaderSettings| {
             settings.sampler = ImageSampler::nearest();
         });
     commands.spawn(MaterialMeshBundle {
