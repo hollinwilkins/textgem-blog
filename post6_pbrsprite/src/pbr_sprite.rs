@@ -10,11 +10,13 @@ use bevy::{
 #[derive(Debug, Default, Clone, Asset, TypePath, AsBindGroup)]
 pub struct PbrSpriteMaterial {
     #[uniform(200)]
-    pub sprite_draw_rect: Vec4,
-    #[texture(201)]
-    #[sampler(202)]
-    #[dependency]
-    pub sprite_texture: Option<Handle<Image>>,
+    pub uv_scale: Vec2,
+    #[uniform(201)]
+    pub uv_translate: Vec2,
+    #[uniform(202)]
+    pub outline_thickness: f32,
+    #[uniform(203)]
+    pub outline_color: Color,
 }
 
 impl MaterialExtension for PbrSpriteMaterial {
@@ -46,13 +48,56 @@ impl From<QuadSprite> for Mesh {
 
         let (u_left, u_right) = if quad.flip { (1.0, 0.0) } else { (0.0, 1.0) };
         let vertices = [
+            // Front Face
             ([-extent_x, -extent_y, 0.0], [0.0, 0.0, 1.0], [u_left, 1.0]),
             ([-extent_x, extent_y, 0.0], [0.0, 0.0, 1.0], [u_left, 0.0]),
             ([extent_x, extent_y, 0.0], [0.0, 0.0, 1.0], [u_right, 0.0]),
             ([extent_x, -extent_y, 0.0], [0.0, 0.0, 1.0], [u_right, 1.0]),
+            // Back Face
+            ([-extent_x, -extent_y, 0.0], [0.0, 0.0, -1.0], [u_left, 1.0]),
+            ([-extent_x, extent_y, 0.0], [0.0, 0.0, -1.0], [u_left, 0.0]),
+            ([extent_x, extent_y, 0.0], [0.0, 0.0, -1.0], [u_right, 0.0]),
+            ([extent_x, -extent_y, 0.0], [0.0, 0.0, -1.0], [u_right, 1.0]),
         ];
 
-        let indices = Indices::U32(vec![0, 2, 1, 0, 3, 2, 2, 0, 1, 3, 0, 2]);
+        let indices = Indices::U32(vec![0, 2, 1, 0, 3, 2, 6, 4, 5, 7, 4, 6]);
+
+        let positions: Vec<_> = vertices.iter().map(|(p, _, _)| *p).collect();
+        let normals: Vec<_> = vertices.iter().map(|(_, n, _)| *n).collect();
+        let uvs: Vec<_> = vertices.iter().map(|(_, _, uv)| *uv).collect();
+
+        Mesh::new(PrimitiveTopology::TriangleList)
+            .with_indices(Some(indices))
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
+    }
+}
+
+pub struct PaperSprite(pub QuadSprite);
+
+impl From<PaperSprite> for Mesh {
+    fn from(paper: PaperSprite) -> Self {
+        let quad = paper.0;
+
+        let extent_x = quad.size.x / 2.0;
+        let extent_y = quad.size.y / 2.0;
+
+        let (u_left, u_right) = if quad.flip { (1.0, 0.0) } else { (0.0, 1.0) };
+        let vertices = [
+            // Front Face
+            ([-extent_x, -extent_y, 0.0], [0.0, 1.0, 0.0], [u_left, 1.0]),
+            ([-extent_x, extent_y, 0.0], [0.0, 1.0, 0.0], [u_left, 0.0]),
+            ([extent_x, extent_y, 0.0], [0.0, 1.0, 0.0], [u_right, 0.0]),
+            ([extent_x, -extent_y, 0.0], [0.0, 1.0, 0.0], [u_right, 1.0]),
+            // Back Face
+            ([-extent_x, -extent_y, 0.0], [0.0, 1.0, 0.0], [u_left, 1.0]),
+            ([-extent_x, extent_y, 0.0], [0.0, 1.0, 0.0], [u_left, 0.0]),
+            ([extent_x, extent_y, 0.0], [0.0, 1.0, 0.0], [u_right, 0.0]),
+            ([extent_x, -extent_y, 0.0], [0.0, 1.0, 0.0], [u_right, 1.0]),
+        ];
+
+        let indices = Indices::U32(vec![0, 2, 1, 0, 3, 2, 6, 4, 5, 7, 4, 6]);
 
         let positions: Vec<_> = vertices.iter().map(|(p, _, _)| *p).collect();
         let normals: Vec<_> = vertices.iter().map(|(_, n, _)| *n).collect();

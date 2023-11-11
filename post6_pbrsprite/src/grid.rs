@@ -160,7 +160,7 @@ impl CameraTarget {
         }
 
         if delta_zoom_level != 0.0 {
-            target.change_zoom_to(delta_zoom_level * time.delta_seconds().clamp(0.0, 1.0));
+            target.change_zoom_to(delta_zoom_level * 0.1 * time.delta_seconds().clamp(0.0, 1.0));
         }
         if delta_rotation != 0.0 {
             target.change_rotation(delta_rotation * 0.8 * time.delta_seconds().clamp(0.0, 1.0));
@@ -177,7 +177,7 @@ impl CameraTarget {
                 .rotate_around(Vec3::default(), Quat::from_axis_angle(target.up, PI / 2.0));
             let right = right_rotation * forward;
 
-            let scale_factor = 1000.0 * time.delta_seconds().clamp(0.0, 1.0);
+            let scale_factor = 200.0 * time.delta_seconds().clamp(0.0, 1.0);
             let new_look_at =
                 look_at + (forward * delta_x * scale_factor) + (right * delta_z * scale_factor);
             target.look_at(new_look_at);

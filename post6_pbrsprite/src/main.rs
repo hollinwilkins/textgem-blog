@@ -6,6 +6,10 @@ use std::f32::consts::PI;
 use bevy::{
     pbr::{self, ExtendedMaterial},
     prelude::*,
+    render::{
+        mesh::{MeshVertexAttributeId, VertexAttributeValues},
+        texture::{ImageLoaderSettings, ImageSampler},
+    },
 };
 use grid::GridMaterial;
 use pbr_sprite::PbrSpriteMaterial;
@@ -27,6 +31,7 @@ fn main() {
 
 fn init_scene(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
     mut grid_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, GridMaterial>>>,
@@ -34,6 +39,9 @@ fn init_scene(
         Assets<ExtendedMaterial<StandardMaterial, pbr_sprite::PbrSpriteMaterial>>,
     >,
 ) {
+    let graph_blue = Color::rgba(0.19, 0.51, 1.0, 1.0);
+    let light_grey = Color::rgba(0.9, 0.9, 0.92, 1.0);
+
     // Setup CameraTarget
     let mut camera_target = grid::CameraTarget::default()
         .looking_at(Vec3::new(0.0, 0.0, 0.0))
@@ -41,13 +49,14 @@ fn init_scene(
         .with_bounding_box(grid::BoundingBox::new(
             Vec3::new(-3000.0, 15.0, -3000.0),
             Vec3::new(3000.0, 4000.0, 3000.0),
-        ));
+        ))
+        .rotating(PI / -4.0);
 
-    let min_x = 500.0;
-    let max_x = 1200.0;
-    let min_y = 100.0;
+    let min_x = 100.0;
+    let max_x = 1000.0;
+    let min_y = 30.0;
     let max_y = 4000.0;
-    let num_steps = 100;
+    let num_steps = 300;
     for i in 0..num_steps {
         let progress = i as f32 / num_steps as f32;
         let y = min_y + (max_y - min_y) * progress;
@@ -61,9 +70,11 @@ fn init_scene(
 
     // Light
     commands.spawn(DirectionalLightBundle {
-        transform: Transform::from_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, 1.0, -PI / 4.)),
+        transform: Transform::from_xyz(100.0, 100.0, 100.0)
+            .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
         directional_light: DirectionalLight {
             shadows_enabled: true,
+            illuminance: 30000.0,
             ..default()
         },
         ..default()
@@ -79,9 +90,9 @@ fn init_scene(
             .into(),
         ),
         material: grid_materials.add(ExtendedMaterial {
-            base: Color::BLUE.into(),
+            base: light_grey.into(),
             extension: GridMaterial {
-                color: Color::ORANGE,
+                color: graph_blue.into(),
                 subdivisions: UVec2::new(0, 0),
                 line_widths: Vec2::new(0.01, 0.01),
             },
@@ -90,14 +101,29 @@ fn init_scene(
     });
 
     // PBR Sprite
-    let pbr_sprite_transform = Transform::from_xyz(0.0, 100.0, 0.0);
+    let image: Handle<Image> =
+        asset_server.load_with_settings("goombah.png", |settings: &mut ImageLoaderSettings| {
+            settings.sampler = ImageSampler::nearest();
+        });
     commands.spawn(MaterialMeshBundle {
-        mesh: meshes.add(pbr_sprite::QuadSprite::new(Vec2::new(32.0, 32.0)).into()),
+        mesh: meshes.add(
+            pbr_sprite::PaperSprite(pbr_sprite::QuadSprite::new(Vec2::new(32.0, 32.0))).into(),
+        ),
         material: pbr_sprite_materials.add(ExtendedMaterial {
-            base: Color::WHITE.into(),
-            extension: PbrSpriteMaterial::default(),
+            base: StandardMaterial {
+                base_color: Color::WHITE,
+                base_color_texture: Some(image),
+                alpha_mode: AlphaMode::Mask(0.2),
+                ..Default::default()
+            },
+            extension: pbr_sprite::PbrSpriteMaterial {
+                uv_scale: Vec2::new(1.0, 1.0),
+                uv_translate: Vec2::new(0.0, 0.0),
+                outline_thickness: 0.05,
+                outline_color: Color::WHITE,
+            },
         }),
-        transform: pbr_sprite_transform,
+        transform: Transform::from_xyz(0.0, 30.0, 0.0),
         ..Default::default()
     });
 }
