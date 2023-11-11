@@ -7,8 +7,20 @@ use bevy::{
     },
 };
 
+pub struct PbrSpritePlugin;
+
+impl Plugin for PbrSpritePlugin {
+    fn build(&self, app: &mut App) {
+        let mut material_plugin =
+            MaterialPlugin::<ExtendedMaterial<StandardMaterial, PbrPaperMaterial>>::default();
+        material_plugin.prepass_enabled = true;
+
+        app.add_plugins(material_plugin);
+    }
+}
+
 #[derive(Debug, Default, Clone, Asset, TypePath, AsBindGroup)]
-pub struct PbrSpriteMaterial {
+pub struct PbrPaperMaterial {
     #[uniform(200)]
     pub uv_scale: Vec2,
     #[uniform(201)]
@@ -19,9 +31,9 @@ pub struct PbrSpriteMaterial {
     pub outline_color: Color,
 }
 
-impl MaterialExtension for PbrSpriteMaterial {
+impl MaterialExtension for PbrPaperMaterial {
     fn fragment_shader() -> ShaderRef {
-        "pbr_sprite.wgsl".into()
+        "pbr_paper.wgsl".into()
     }
 }
 
@@ -108,17 +120,5 @@ impl From<PaperSprite> for Mesh {
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
             .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
             .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
-    }
-}
-
-pub struct PbrSpritePlugin;
-
-impl Plugin for PbrSpritePlugin {
-    fn build(&self, app: &mut App) {
-        let mut material_plugin =
-            MaterialPlugin::<ExtendedMaterial<StandardMaterial, PbrSpriteMaterial>>::default();
-        material_plugin.prepass_enabled = true;
-
-        app.add_plugins(material_plugin);
     }
 }

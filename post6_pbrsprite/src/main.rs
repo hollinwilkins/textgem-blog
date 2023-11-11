@@ -12,7 +12,7 @@ use bevy::{
     },
 };
 use grid::GridMaterial;
-use pbr_sprite::PbrSpriteMaterial;
+use pbr_sprite::PbrPaperMaterial;
 
 fn main() {
     App::new()
@@ -36,11 +36,11 @@ fn init_scene(
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
     mut grid_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, GridMaterial>>>,
     mut pbr_sprite_materials: ResMut<
-        Assets<ExtendedMaterial<StandardMaterial, pbr_sprite::PbrSpriteMaterial>>,
+        Assets<ExtendedMaterial<StandardMaterial, pbr_sprite::PbrPaperMaterial>>,
     >,
 ) {
     let graph_blue = Color::rgba(0.19, 0.51, 1.0, 1.0);
-    let light_grey = Color::rgba(0.9, 0.9, 0.92, 1.0);
+    let light_grey = Color::rgba(0.85, 0.85, 0.92, 1.0);
 
     // Setup CameraTarget
     let mut camera_target = grid::CameraTarget::default()
@@ -116,7 +116,7 @@ fn init_scene(
                 alpha_mode: AlphaMode::Mask(0.2),
                 ..Default::default()
             },
-            extension: pbr_sprite::PbrSpriteMaterial {
+            extension: pbr_sprite::PbrPaperMaterial {
                 uv_scale: Vec2::new(1.0, 1.0),
                 uv_translate: Vec2::new(0.0, 0.0),
                 outline_thickness: 0.05,
